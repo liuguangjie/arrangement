@@ -1,0 +1,91 @@
+sync  同步磁盘
+
+  
+echo 3 > /proc/sys/vm/drop_caches  清理无用的内存空间
+
+tomcat8  最终的配置
+1.${tomcat}/bin/catalina.sh 加入
+JAVA_OPTS="-Djava.awt.headless=true -Dfile.encoding=UTF-8 -server -Xms1G -Xmx1G  -Xss256k -XX:NewSize=1G -XX:MaxNewSize=1G
+-XX:PermSize=128m -XX:MaxPermSize=128m -XX:+DisableExplicitGC"
+
+2.
+ JAVA_OPTS="$JAVA_OPTS -server -Xms3G -Xmx3G -Xss256k -XX:PermSize=128m -XX:MaxPermSize=128m -XX:+UseParallelOldGC -XX:+HeapDumpOnOutOfMemoryError -XX:HeapDumpPath=/usr/aaa/dump -XX:+PrintGCDetails -XX:+PrintGCTimeStamps -Xloggc:/usr/aaa/dump/heap_trace.txt -XX:NewSize=1G -XX:MaxNewSize=1G"
+
+
+2.${tomcat}/conf/server.xml
+打开注释掉的
+<Executor name="tomcatThreadPool" namePrefix="catalina-exec-"
+        maxThreads="300" minSpareThreads="50"/>
+
+
+添加 Connector 中没有的选项
+ <Connector port="80" protocol="org.apache.coyote.http11.Http11NioProtocol"
+               executor="tomcatThreadPool"
+               minSpareThreads="50"
+               maxSpareThreads="500"
+               enableLookups="false"
+               acceptCount="500"
+               debug="0"
+               connectionTimeout="10000"
+               redirectPort="8443"
+               compression="on"
+               compressableMimeType="text/html,text/xml,text/plain,text/javascript,text/css"
+               disableUploadTimeout="true"
+               URIEncoding="UTF-8"
+               useBodyEncodingForURI="true"
+                />
+
+
+各参数详解：
+
+-Xms：设置JVM初始内存大小(默认是物理内存的1/64)
+
+-Xmx：设置JVM可以使用的最大内存(默认是物理内存的1/4，建议：物理内存80%)
+
+-Xmn：设置JVM最小内存(128-256m就够了,一般不设置)
+
+默认空余堆内存小于
+40%时，JVM就会增大堆直到-Xmx的最大限制；空余堆内存大于70%时，JVM会减少堆直到-Xms的最小限制。因此服务器一般设置-Xms、
+-Xmx相等以避免在每次GC 后调整堆的大小。
+
+在较大型的应用项目中，默认的内存是不够的，有可能导致系统无法运行。常见的问题是报Tomcat内存溢出错误“java.lang.OutOfMemoryError:
+Java heap space”，从而导致客户端显示500错误。
+
+
+
+-XX:PermSize ：为JVM启动时Perm的内存大小
+
+-XX:MaxPermSize ：为最大可占用的Perm内存大小(默认为32M)
+
+-XX:MaxNewSize，默认为16M
+
+PermGen space的全称是Permanent Generation
+space,是指内存的永久保存区域，这块内存主要是被JVM存放Class和Meta信息的,Class在被Loader时就会被放到PermGen
+space中，它和存放类实例(Instance)的Heap区域不同,GC(Garbage
+Collection)不会在主程序运行期对PermGen
+space进行清理，所以如果你的应用中有很CLASS的话,就很可能出现“java.lang.OutOfMemoryError:
+PermGen space”错误。
+
+对于WEB项目，jvm加载类时，永久域中的对象急剧增加，从而使jvm不断调整永久域大小，为了避免调整)，你可以使用更多的参数配置。如果你的WEB
+APP下都用了大量的第三方jar, 其大小超过了jvm默认的大小,那么就会产生此错误信息了。
+
+其它参数：
+
+-XX:NewSize ：默认为2M，此值设大可调大新对象区，减少Full
+GC次数
+
+-XX:NewRatio ：改变新旧空间的比例，意思是新空间的尺寸是旧空间的1/8（默认为8）
+
+-XX:SurvivorRatio ：改变Eden对象空间和残存空间的尺寸比例，意思是Eden对象空
+
+间的尺寸比残存空间大survivorRatio+2倍（缺省值是10）
+
+-XX:userParNewGC 可用来设置并行收集【多CPU】
+
+-XX:ParallelGCThreads 可用来增加并行度【多CPU】
+
+-XXUseParallelGC 设置后可以使用并行清除收集器【多CPU】
+
+参考地址
+http://www.cnblogs.com/lxzh/p/3527376.html
+http://www.cnblogs.com/kreo/p/4434802.html

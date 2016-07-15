@@ -1,0 +1,265 @@
+tomcat的性能优化
+在server.xml中配置
+ <Connector
+    maxThreads="1000"
+    minSpareThreads="100"
+    acceptCount="700"
+ />标签
+maxThreads="1000" 最大并发数
+minSpareThreads="100"///初始化时创建的线程数
+maxSpareThreads="500"///一旦创建的线程超过这个值，Tomcat就会关闭不再需要的socket线程。
+acceptCount="700"//  当同时连接的人数达到maxThreads时，还可以接收排队的连接，超过这个连接的则直接返回拒绝连接。
+
+web server允许的最大连接数还受制于操作系统的内核参数设置，
+通常Windows是2000个左右，Linux是1000个左右。Unix中如何设置这些参数，请参阅Unix常用监控和管理命令
+
+如何加大tomcat连接数
+
+
+在tomcat配置文件server.xml中的配置中，和连接数相关的参数有：
+minProcessors：最小空闲连接线程数，用于提高系统处理性能，默认值为10
+maxProcessors：最大连接线程数，即：并发处理的最大请求数，默认值为75
+acceptCount：允许的最大连接数，应大于等于maxProcessors，默认值为100
+enableLookups：是否反查域名，取值为：true或false。为了提高处理能力，应设置为false
+connectionTimeout：网络连接超时，单位：毫秒。设置为0表示永不超时，这样设置有隐患的。通常可设置为30000毫秒。
+其中和最大连接数相关的参数为maxProcessors和acceptCount。如果要加大并发连接数，应同时加大这两个参数。
+
+
+
+
+tomcat7.0性能优化-挑战极限完整版
+
+博客分类： 中间件tomcat/resin/nginx/was
+
+0 测试结果
+参考精简版的空跑测试结论
+http://phl.iteye.com/blog/1868206
+
+1 tomcat
+1.1 tomcat运行模式
+Connector/protocol
+org.apache.coyote.http11.Http11Protocol - blocking Java connector
+org.apache.coyote.http11.Http11NioProtocol - non blocking Java connector
+org.apache.coyote.http11.Http11AprProtocol - the APR/native connector.
+
+                       Java Blocking Connector   Java Non Blocking Connector   APR/native Connector
+                                 BIO                         NIO                       APR
+    Classname              Http11Protocol             Http11NioProtocol         Http11AprProtocol
+    Tomcat Version           3.x onwards                 6.x onwards              5.5.x onwards
+    Support Polling              NO                          YES                       YES
+    Polling Size                 N/A                   maxConnections             maxConnections
+    Read HTTP Request         Blocking                  Non Blocking                 Blocking
+    Read HTTP Body            Blocking                  Sim Blocking                 Blocking
+    Write HTTP Response       Blocking                  Sim Blocking                 Blocking
+    Wait for next Request     Blocking                  Non Blocking               Non Blocking
+    SSL Support               Java SSL                    Java SSL                   OpenSSL
+    SSL Handshake             Blocking                  Non blocking                 Blocking
+    Max Connections        maxConnections              maxConnections             maxConnections
+
+1.2 APR与tomcat-native安装
+到http://apr.apache.org/下载下面3个包
+
+apr-1.4.6.tar.gz
+apr-iconv-1.2.1.tar.gz
+apr-util-1.5.1.tar.gz
+
+1.安装apr
+./configure --prefix=/application/search/usr/apr/apr-1.4.6
+make -j16
+make install -j16
+
+2.安装apr-iconv
+./configure --prefix=/application/search/usr/apr-iconv/apr-iconv-1.2.1 --with-apr=/application/search/usr/apr/default
+make -j16
+make install -j16
+
+3.安装apr-util
+./configure --prefix=/application/search/usr/apr-util/apr-util-1.5.1 --with-apr=/application/search/usr/apr/default --with-apr-iconv=/application/search/usr/apr-iconv/default/bin/apriconv
+make -j16
+make install -j16
+
+4安装tomcat-native
+在tomcat目录下，找到bin/tomcat-native-1.1.24-src
+./configure --with-apr=/application/search/usr/apr/default --with-java-home=/application/search/usr/java/default
+make -j16
+make install -j16
+
+配置环境变量
+vi ~/.bashrc
+export LD_LIBRARY_PATH=/application/search/usr/apr/default/lib:/application/search/usr/tomcat-native/default/lib
+使环境变量生效
+source ~/.bashrc
+附加阅读
+
+----------------------------------------------------------------------
+Libraries have been installed in:
+/application/search/usr/tomcat-native/tomcat-native-1.1.24/lib
+
+If you ever happen to want to link against installed libraries
+in a given directory, LIBDIR, you must either use libtool, and
+specify the full pathname of the library, or use the `-LLIBDIR'
+flag during linking and do at least one of the following:
+- add LIBDIR to the `LD_LIBRARY_PATH' environment variable
+during execution
+- add LIBDIR to the `LD_RUN_PATH' environment variable
+during linking
+- use the `-Wl,-rpath -Wl,LIBDIR' linker flag
+- have your system administrator add LIBDIR to `/etc/ld.so.conf'
+
+See any operating system documentation about shared libraries for
+more information, such as the ld(1) and ld.so(8) manual pages.
+----------------------------------------------------------------------
+
+1.3 优化配置
+官方参考文档 http://tomcat.apache.org/tomcat-7.0-doc/config/http.html
+为了提高安全性，一般情况下屏蔽 AJP
+注释或者删除server.xml中的 Connector节点
+<Connector port="8009" protocol="AJP/1.3" redirectPort="8443" />
+
+启用NIO或者APR模式运行
+想运行在该模式下，直接修改server.xml里的Connector节点,修改protocol为
+<Connector port="80" protocol="org.apache.coyote.http11.Http11NioProtocol"   (或者Http11AprProtocol)
+connectionTimeout="20000"
+URIEncoding="UTF-8"
+useBodyEncodingForURI="true"
+enableLookups="false"  (是否反查域名)
+redirectPort="8443" />
+
+根据经验，调整nio的线程池，参考http://tomcat.apache.org/tomcat-7.0-doc/config/http.html
+
+线程池参数，需要直接在connector节点配置。
+  <Connector port="8080"
+               protocol="org.apache.coyote.http11.Http11NioProtocol"
+               connectionTimeout="20000"
+               URIEncoding="UTF-8"
+               useBodyEncodingForURI="true"
+               maxThreads="768"
+               minSpareThreads="64"
+               enableLookups="false"
+               redirectPort="8443" />
+
+调整内存
+JAVA_OPTS="-Xms1024m -Xmx1024"
+
+启用APR
+Apr要自己安装
+<Connector port="8081"
+               executor="tomcatThreadPool"
+               protocol="org.apache.coyote.http11.Http11AprProtocol"
+               connectionTimeout="20000"
+               URIEncoding="UTF-8"
+               useBodyEncodingForURI="true"
+               enableLookups="false"
+               redirectPort="8444" />
+
+调整线程池
+<Connector port="8081"
+               executor="tomcatThreadPool"
+               protocol="org.apache.coyote.http11.Http11AprProtocol"
+               connectionTimeout="20000"
+               URIEncoding="UTF-8"
+               useBodyEncodingForURI="true"
+               enableLookups="false"
+               redirectPort="8444" />
+
+<Executor name="tomcatThreadPool"
+namePrefix="catalina-exec-"
+maxThreads="1024"
+minSpareThreads="512"
+prestartminSpareThreads="true" />
+
+注意：线程池设置在apr,nio模式下不生效（个人估计是个bug），查看manager页面，线程数还是200。因此需要将maxThreads，minSpareThreads直接设置在connector节点下
+
+
+2 经验总结
+首先要掌握未优化之前，服务器性能现状；
+设置虚拟机内存，性能提升明显；
+设置tomcat运行模式略微有提高；
+设置tomcat线程池，一般设置的比较大以免成为瓶颈；
+逐步递增的性能调试计划，从较少请求数，较低并发开始逐步递增。直到性能明显下降位置；
+以吞吐率、并发、响应时间等为关键性能指标；
+区分裸奔性能和分布式调用的性能；
+尽量覆盖全部代码运行，服务启动要为性能测试做特殊处理（callId,timeStamp）；
+做AB压力测试,可以编写个shell夜间运行并将结果重定向；
+
+3 widget的压力测试技术
+224网段有防火墙设置，所以先前的压力测试不够准确
+之后采取了搬迁物理服务器到防火墙外面
+做了相关的压力测试
+优化点如下：
+1 动态、静态分离部署
+2 将widget从2台扩充到8台物理服务器
+3 单台物理服务器，配置1台tomcat占用全部服务器资源性能  <  配置8台tomcat占用全部服务器资源性能，大概差4-5倍
+
+Linux命令查看CPU
+more /proc/cpuinfo
+
+主要查看物理cpu数，线程数
+processor      逻辑处理器的id。
+physical id    物理封装的处理器的id。
+core id        每个核心的id。
+cpu cores      位于相同物理封装的处理器中的内核数量。
+siblings       位于相同物理封装的处理器中的逻辑处理器的数量。
+
+
+
+
+
+Apache-Bench工具介绍
+Apache HTTP服务器已经带了一个测试工具: ab
+
+一般把apache压力测试称为AB测试. ab工具的位置在apache2的bin目录里为什么用这个工具
+
+l  支持命令行执行，可以在linux行运行
+l  简单，实用
+l  应用广泛
+
+1.1.1    输入参数
+常用的命令如下:
+./ab -n 请求次数 -c 并发数 地址
+
+参数名 参数含义
+-n 请求数
+-c 并发数
+
+windows下，地址要用双引号
+linux下，地址用单引号
+
+1.1.2    输出报表
+字段名字 中文解释
+Server Software 被测试的Web服务器软件名称
+Server Hostname 请求的URL中的主机部分名称
+Server Port 被测试的WEB服务器的监听端口
+Document Path URL中的相对路径
+Document Length http响应数据的正文长度
+Concurrency Level 并发用户数(-c)
+Time taken for tests 所有请求被处理完所花费的总时间
+Complete requests 总请求数(-n)
+Failed requests 失败请求数
+Total transferred 所有请求的响应数据长度和，包括头和正文
+HTML transferred 所有请求的响应数据中，正文数据的和
+Requests per second 吞吐率
+Time per request 用户平均请求等待时间 = time taken for tests / (complete requests / concurrency level)
+Time per request: 服务器平均请求处理时间 = 吞吐率的倒数 = time per request / concurrency level
+Transfer rate 请求在单位时间内，从服务器获的数据长度
+Percentage of the requests served within a certain time (ms) 请求处理时间的分布情况
+
+参考资料
+http://www.cnblogs.com/jackei/archive/2006/07/18/454144.html  apache-ab
+http://wenku.baidu.com/view/3fe17e1bc5da50e2524d7fb9.html apache-ab
+http://phl.iteye.com/blog/910984  apr安装
+http://phl.iteye.com/blog/910996  tomcat运行模式
+http://phl.iteye.com/admin/blogs/1561604 proc/cpuinfo的概念
+http://tomcat.apache.org/tomcat-7.0-doc/config/executor.html  tomcat线程池配置
+http://tomcat.apache.org/tomcat-7.0-doc/config/http.html  tomcat protocol
+http://city-moon.iteye.com/blog/578282  Tomcat 6 支持 NIO -- Tomcat的四种基于HTTP协议的Connector性能比较
+
+
+
+
+
+
+tomcat性能优化的参考地址
+http://www.cnblogs.com/jifeng/p/3327813.html
+http://www.cnblogs.com/ggjucheng/archive/2013/04/16/3024731.html
+http://phl.iteye.com/blog/1982676

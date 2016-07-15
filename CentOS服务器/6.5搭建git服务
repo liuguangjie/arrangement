@@ -1,0 +1,11 @@
+1.下载源代码 https://www.kernel.org/pub/software/scm/git/
+2.下载依赖包(前提：必须安装开发环境)
+yum install curl-devel expat-devel gettext-devel openssl-devel zlib-devel gcc perl-ExtUtils-MakeMaker
+
+3.添加git用户和禁用shell
+
+4.管理pubkey
+	4.1 安装Gitosis配置手记
+	http://blog.csdn.net/esinzhong/article/details/8018041
+
+

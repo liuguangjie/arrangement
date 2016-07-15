@@ -1,0 +1,423 @@
+这里要首先尊重和感谢一下燕十八老师的辛苦录制的视频：非常非常谢谢无私的备课和讲课
+本着公益分享和支持原创的态度；
+如果他本人觉得有不妥的地方，请联系我，我会删掉。
+
+听说他自己也有php高性能架构班的课程视频。。。额，这个是培训课程，不免费。。。
+可否也公开供大家学习一下，或者谁有能发给我，学习观摩一下？
+
+delimiter $
+create table goods(
+gid int,
+name varchar(20),
+num smallint
+);
+create table ord(
+oid int,
+gid int,
+much smallint
+);
+insert into goods values
+(1,'cat',34),
+(2,'dog',65),
+(3,'pig',21);
+
+1）触发器：
+create trigger t1
+after
+insert
+on ord
+for each row
+begin
+update goods set num=num-2 where gid=1;
+end$
+
+show triggers \G
+
+create trigger t2
+
+after
+insert
+on ord
+for each row
+begin
+update goods set num=num-new.much where gid=new.gid;
+end$
+
+create trigger t3
+after
+delete
+on ord
+for each row
+begin
+update goods set num=num+old.much where gid=old.gid;
+end$
+
+create trigger t4
+before
+update
+on ord
+for each row
+begin
+update goods set num=num+old.much-new.much where gid=new.gid;
+end$
+
+create trigger t5(错误的例子)
+before    #这里改了
+insert
+on ord
+for each row
+begin
+declare rnum int;
+select num into rnum from goods where gid=new.gid;
+if new.much >rnum then
+	set new.much = rnum;
+end if;
+update goods set num=num-new.much where gid=new.gid;
+end$
+
+
+or each row 说明 Mysql 只有行级触发器，oracle里除了行级触发器还有语句级触发器。
+
+2）存储过程：
+create procedure p1()
+begin
+	select 'hello' from dual;
+end$
+
+call p1()$
+
+
+create procedure p2()
+begin
+declare age int default 18;
+declare height int default 180;
+select concat('年龄是',age,'身高是',height);
+end$
+
+create procedure p3()
+begin
+declare age int default 18;
+set age:= age+20;
+select concat('20年后年龄是',age);
+end$
+
+create procedure p4()
+begin
+declare age int default 18;
+if age >=18 then
+select  '成年';
+else
+select '未成年';
+end if;
+end$
+
+create procedure p5(width int ,height int)
+begin
+select concat('你的面积是', width * height ) as area;
+if width >height then
+select '你挺胖';;
+elseif width < height then
+select ‘你挺瘦’;
+else
+select '你挺方';
+endif;
+end$
+
+create procedure p6()
+begin
+declare total int default 0;
+declare num int default 0;
+while num <100 do
+set num:=num+1;
+set total:= total +num;
+end while;
+select total;
+end$
+
+create procedure p7(in n int)
+begin
+declare total int default 0;
+declare num int default 0;
+while num <n do
+set num:=num+1;
+set total:= total +num;
+end while;
+select total;
+end$
+
+create procedure p8(in n int ,out total int)
+begin
+declare num int default 0;
+set total :=0; #null  碰到任何操作都会变成null
+while num<n do
+set num:=num+1;
+set total :=total+num;
+end while;
+end$
+
+call p8(100,@summary)$
+select @summary
+
+create procedure p9(inout age int)
+begin
+set age:=age +20;
+end$
+
+set @currage =18$
+call p9(@currage)$
+select @currage$
+
+
+create procedure p10()
+begin
+declare pos int default 0;
+set pos := floor(5*rand());
+case pos
+when 1 then select 'still flying';
+when 2 then select 'fall in sea';
+when 3 then select 'in the island';
+else select 'I don't know';
+end case;
+end$
+
+create procedure p11()
+begin
+declare total int default 0;
+declare i int default 0;
+repeat 
+set i:=i+1;
+set total :=total +i;
+until i>=100 end repeat;
+select total;
+end$
+
+create procedure p12()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare getgoods cursor for select gid, num , name from goods;
+open getgoods;
+fetch getgoods into row_gid,row_num,row_name;
+select row_num,row_name;
+close getgoods;
+end$
+
+create procedure p13()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare getgoods cursor for select gid, num , name from goods;
+open getgoods;
+fetch getgoods into row_gid,row_num,row_name; #cat
+select row_num,row_name;
+
+fetch getgoods into row_gid,row_num,row_name;#dog
+select row_num,row_name;
+
+fetch getgoods into row_gid,row_num,row_name;#pig
+select row_num,row_name;
+
+fetch getgoods into row_gid,row_num,row_name;#error
+select row_num,row_name;
+
+close getgoods;
+end$
+
+#逻辑处理游标越界
+create procedure p14()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare cnt int default 0;
+declare i int default 0;
+
+declare getgoods cursor for select gid, num , name from goods;
+select count(*) into cnt from goods;
+
+open getgoods;
+repeat set 
+fetch getgoods into row_gid,row_num,row_name; #cat
+select row_num,row_name;
+until i >= cnt  end repeat;
+close getgoods;
+end$
+
+
+create procedure p15()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare you int default 1;
+
+declare getgoods cursor for select gid, num , name from goods;
+select count(*) into cnt from goods;
+declare continue handler for NOT FOUND set you :=0;
+open getgoods;
+repeat set 
+fetch getgoods into row_gid,row_num,row_name;
+select row_num,row_name;
+until you=0 end repeat;
+close getgoods;
+end$
+
+call p15()$
+show warnings$
+
+create procedure p16()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare you int default 1;
+
+declare getgoods cursor for select gid, num , name from goods;
+select count(*) into cnt from goods;
+declare exit handler for NOT FOUND set you :=0;#这里的handler类型改成了exit
+open getgoods;
+repeat set 
+fetch getgoods into row_gid,row_num,row_name; 
+select row_num,row_name;
+until you=0 end repeat;
+close getgoods;
+end$
+
+#还有一种undo handler  目前mysql 还不支持。。。表示前面的语句撤销
+
+#接下来的存储过程才应该是游标的正确使用方式：
+#一定要用continue handler  ，通过逻辑来控制。
+create procedure p17()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare you int default 1;
+
+declare getgoods cursor for select gid, num , name from goods;
+select count(*) into cnt from goods;
+declare continue handler for NOT FOUND set you :=0;
+open getgoods;
+fetch getgoods into row_gid,row_num,row_name; 
+repeat set 
+select row_num,row_name;
+fetch getgoods into row_gid,row_num,row_name; 
+until you=0 end repeat;
+close getgoods;
+end$
+
+#换成while 循环
+create procedure p18()
+begin
+declare row_gid int;
+declare row_num int;
+declare row_name varchar(20);
+declare you int default 1;
+
+declare getgoods cursor for select gid, num , name from goods;
+select count(*) into cnt from goods;
+declare continue handler for NOT FOUND set you :=0;
+open getgoods;
+fetch getgoods into row_gid,row_num,row_name; 
+while you =1 do
+select row_num,row_name;
+fetch getgoods into row_gid,row_num,row_name; 
+end while;
+close getgoods;
+end$
+
+3)权限
+use mysql$
+desc user$
+select host,user,password from user$
+命令行：mysql -hXXXXXXXXXXXXX -uroot -p
+重刷权限 ：flush privileges$
+修改密码：update user set password=password('111111')  where xxxx;
+
+select datebase()$
+show tables;#db 表和 tables_priv表很重要
+
+select host,user,password from user$
+
+grant all on *.* to lisi@'192.168.1.%' identified by '1111111'$
+select * from user where user='lisi' \G
+
+revoke all on *.* from  lisi@'192.168.1.%'$
+flush privileges$
+
+grant all on ecshop.* to lisi@'192.168.1.%' $
+revoke all on ecshop.* from  lisi@'192.168.1.%'$
+
+grant insert update,select on gy3.goods to lisi@'192.168.1.%'$
+
+4)主从复制；
+vim /etc/my.cnf
+server-id=201
+log-bin=mysql-bin
+#二进制日志的格式有mixed、row、statement
+#statement 记录的是执行语句
+#row 记录的是磁盘变化
+binlog-format=mixed
+
+#把旧的日志删除
+cd /var/lib/mysql
+
+#另一台
+vim /etc/my.cnf
+server-id=202
+log-bin=mysql-bin
+binlog-format =mixed
+relay-log=mysql-relay
+
+#启动：
+service mysqld start
+#不出问题就不要执行下面两条，如果执行请一条一条执行
+#mysqld_safe --user=mysql &
+
+#ps aux|grep mysql
+
+#ls /var/lib/mysql/mysql.sock
+#mysql -uroot -p -S /var/lib/mysql/myssql.sock
+#ln -s /var/lib/mysql/mysql.sock /tem/mysqld.sock
+
+show master status;
+show slave status;
+
+ #主服务器授权
+grant replication client,replication slave on *.* to repl@'192.168.1.%' identified by 'repl';
+flush privileges;
+
+#从服务器
+change master to 
+master_host='192.168.1.201',
+master_user='repl',
+master_password='repl',
+master_log_file='mysql-bin.00001'
+master_log_pos=348;#这个根据刚刚show master status 的结果来定
+#启动服务
+start slave;
+#出错，last_io_error 
+telnet ip 3306 不通
+ping ip 通
+说明是防火墙的问题
+
+关掉防火墙
+service iptables stop;
+stop slave;
+start slave;
+
+#同步过程怎么避免冲突
+set global auto_increment_increment=2;
+set global auto_increment_offset=1;
+set session auto_increment_increment=2;
+set session auto_increment_offset=1;
+#另一台
+set global auto_increment_increment=2;
+set global auto_increment_offset=2;
+set session auto_increment_increment=2;
+set session auto_increment_offset=2;
+
+#把auto_increment_increment 和 auto-increment-offset 写到对应的配置文件中，避免下次重启后失效
+

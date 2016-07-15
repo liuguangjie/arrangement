@@ -1,0 +1,15 @@
+官方文档
+https://wiki.gentoo.org/wiki/Handbook:AMD64/Installation/Disks
+
+
+系统安装
+http://www.widuu.com/archives/03/1021.html
+
+http://jingyan.baidu.com/article/363872ec39963c6e4aa16f74.html?st=2&net_type=1&bd_page_type=1&os=0&rst=
+
+http://blog.sina.com.cn/s/blog_69e5d8400101chbl.html
+镜像地址
+GENTOO_MIRRORS="http://mirrors.aliyun.com/gentoo-portage/" 
+SYNC="rsync://rsync.aliyun.com/gentoo-portage"
+
+所有可参考的变量，都用注释形式罗列在/mnt/gentoo/usr/share/portage/config/make.conf.example里。
