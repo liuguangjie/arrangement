@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# deploy.sh
+
+# 进入项目的目录
+cd  /apps/projects/rzk
+/apps/git/bin/git pull
+/apps/tomcat7/bin/shutdown.sh
+
+/apps/maven/bin/mvn clean
+
+/apps/maven/bin/mvn package -Dmaven.test.skip=true
+
+rm -rf /apps/tomcat7/webapps/gaswaterheater*
+
+cp -a upload.properties  target/gaswaterheater/WEB-INF/classes/
+
+cp -a target/gaswaterheater  /apps/tomcat7/webapps/
+
+/apps/tomcat7/bin/startup.sh
+
+
+
